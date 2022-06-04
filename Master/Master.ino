@@ -18,9 +18,12 @@ const char keyPad[ROWS][COLS] = {
   {'*', '0', '#', 'D'}
 };
 byte rowPins[ROWS] = {9,8,7,6}; 
-byte colPins[COLS] = {5,4,3,2}; 
+byte colPins[COLS] = {5,4,3,0}; 
 Keypad keypad = Keypad(makeKeymap(keyPad), rowPins, colPins, ROWS, COLS); 
 boolean sleep;
+int startime;
+int endtime;
+int temp;
 
 
 
@@ -34,29 +37,37 @@ void setup(){
 }
 
 void loop(){
-  Serial.println("tes");
   char key = keypad.getKey();
   lcd.clear();
   lcd.setCursor(0, 0);
     
   digitalWrite(SS, LOW);
 
-  for(i = 0; i < 1000; i++){
-    Serial.println(i);
+  startime = millis();
+  endtime = startime;
+  Serial.println("Outside Loop");
+  Serial.print("Start Time:");
+  Serial.println(startime);
+  Serial.print("End Time:");
+  Serial.println(endtime);
+
+  while(startime > 0){
+    temp = endtime - startime;
+    Serial.println(temp);
     char key = keypad.getKey();
-    Serial.println(key);
     if(key){
       SPI.transfer(key);
       break;
     }
     else{
-      if(i == 999){
+      if(temp >= 5000){
         sleep = true;
         SPI.transfer(sleep);
         gonna_sleep();
-        
+        break;
       }
     }
+    endtime = millis();
   }
   
   digitalWrite(SS, HIGH);
