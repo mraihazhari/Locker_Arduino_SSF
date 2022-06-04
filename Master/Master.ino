@@ -3,13 +3,12 @@
 #include <LiquidCrystal_I2C.h>
 #include <avr/sleep.h>
 #define interruptPin 2
-
-//pinInput untuk fingerprint
+#define fpPin 0 //pin input Finger Print
 
 LiquidCrystal_I2C lcd(0x27,21,4);
-const int fp = 0;
-int i;
-int j;
+int i, j;
+
+// Setup Keypad
 const byte ROWS = 4, COLS = 4;
 const char keyPad[ROWS][COLS] = {
   {'1', '2', '3', 'A'},
@@ -20,16 +19,18 @@ const char keyPad[ROWS][COLS] = {
 byte rowPins[ROWS] = {9,8,7,6}; 
 byte colPins[COLS] = {5,4,3,0}; 
 Keypad keypad = Keypad(makeKeymap(keyPad), rowPins, colPins, ROWS, COLS); 
+
+// Variabel untuk mengatur sleep
 boolean sleep;
 int startime;
 int endtime;
 int temp;
-
+const int idleTime = 2000;
 
 
 void setup(){
   Serial.begin(9600);
-   lcd.begin(21,4);
+  lcd.begin(21,4);
   pinMode(interruptPin,INPUT_PULLUP);
   SPI.begin();
   SPI.setClockDivider(SPI_CLOCK_DIV8);
@@ -43,6 +44,7 @@ void loop(){
     
   digitalWrite(SS, LOW);
 
+  // Mulai record waktu
   startime = millis();
   endtime = startime;
   Serial.println("Outside Loop");
@@ -60,7 +62,7 @@ void loop(){
       break;
     }
     else{
-      if(temp >= 5000){
+      if(temp >= idleTime){
         sleep = true;
         SPI.transfer(sleep);
         gonna_sleep();
@@ -74,14 +76,12 @@ void loop(){
   delay(10);
 }
 
-
-
 void gonna_sleep(){
-  //melakukan enable ke mode sleep
+   // melakukan enable ke mode sleep
    sleep_enable();
    Serial.println("Sleep Mode");
    Serial.println("Zzz");
-   //menset interrupt
+   // menset interrupt
    /*
     * Jika interruptPin bernilai 0
     * maka akan dilakukan interrupt
