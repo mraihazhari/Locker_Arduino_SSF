@@ -1,84 +1,63 @@
 #include <LiquidCrystal_I2C.h>
 #include <SPI.h>
 #include <Servo.h>
+#define lockPin 7
 
 Servo myservo;
 
-
-int pos = 0;
-int lock = 7;
-int startime;
-int endtime;
-boolean lock_status;
-
 LiquidCrystal_I2C lcd(0x27,21,4);
-volatile boolean process;
-volatile boolean masterMode;
-volatile boolean canInput;
-volatile char key;
-const String password;
-volatile String buff;
+volatile boolean receivedInput = false;
+boolean loggedIn = false;
+const String password = "123";
+volatile String buff = "";
+volatile char slaveReceive; // key dari master
+int startTime, endTime, currTime;
 
 void setup(){
   lcd.begin(21,4);
   lcd.setCursor(0, 0);
-  lcd.print("Slave input: ");
+  lcd.print("Locker input: ");
   lcd.setCursor(0, 1);
   lcd.print("--> ");
   pinMode(MISO, OUTPUT);
   SPCR |= _BV(SPE);
-  process = false;
-  canInput = true;
-  password = "123";
-  buff = "";
-  masterMode = false;
   SPI.attachInterrupt();
   myservo.attach(9);
-  pinMode(lock, INPUT);
+  pinMode(lockPin, INPUT);
 }
 
 ISR(SPI_STC_vect){
-  key = SPDR;
-  process = true;
+  slaveReceive = SPDR;
+  receivedInput = true;
 }
 
 void loop(){
-  // Authentication Mode
+  const int lockTime = 3000;
   
-  if(process && !masterMode && canInput){
-    process = false;
-    lcd.print(key);
-    buff += key;
+  if(receivedInput){
+    receivedInput = false;
+    lcd.print(slaveReceive);
+    buff += slaveReceive;
     if(buff.length() == password.length()){
-      // Correct Password
       if(buff == password){
-        masterMode = true;
+        loggedIn = true;
+        buff = "";
         lcd.clear();
         lcd.setCursor(0, 0);
         lcd.print("C O R R E C T");
         lcd.setCursor(0, 1);
         lcd.print("P A S S W O R D");
-        delay(300);
-        lcd.clear();
-        lcd.setCursor(0, 0);
-        lcd.print("Welcome, Master");
-        delay(150);
-        lcd.setCursor(0, 1);
-        lcd.print("Should I execute");
-        lcd.setCursor(0, 2);
-        lcd.print("Operation Overdrive?");
-        lcd.setCursor(0, 3);
-        lcd.print("--> ");
-        buff = "";
-        startime = millis();
-        lock_status = false;
-        for(pos = 90; pos <= 180 ; pos ++){
+        startTime = millis();
+        // Ini ceritanya buka servo krn dari 90 sampe 180
+        for(int pos = 90; pos <= 180 ; pos++){
           myservo.write(pos);
           delay(10);
         }
+        lcd.clear();
+        lcd.print("Welcome, sir");
       }
-      // Incorrect Password
       else{
+        buff = "";
         lcd.clear();
         lcd.setCursor(0, 0);
         lcd.print("I N C O R R E C T");
@@ -86,35 +65,35 @@ void loop(){
         lcd.print("P A S S W O R D");
         delay(300);
         lcd.clear();
-        lcd.setCursor(0, 0);
-        lcd.print("Intruder detected");
-        delay(150);
-        lcd.setCursor(0, 1);
-        lcd.print("Initiating");
-        lcd.setCursor(0, 2);
-        lcd.print("Operation Bloodshed");
+        lcd.print("Redirecting...");
         delay(300);
-        lcd.setCursor(0, 3);
-        lcd.print("See you in hell");
-        buff = "";
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Locker input: ");
+        lcd.setCursor(0, 1);
+        lcd.print("--> ");
       }
     }
   }
-  // Master Mode
-  if(process && masterMode && canInput){
-    process = false;
-    lcd.print(key);
-    
-    // Set of instructions ...
-  }
 
-  if((digitalRead(lock) == HIGH || (endtime - startime) >= 360000) && lock_status == false){
-     for(pos = 180; pos >= 90 ; pos --){
-          myservo.write(pos);
-          lock_status = true;
-          delay(10);
-      }
+  // Loker akan terkunci apabila
+  // 1. Tombol lock di tekan dan
+  // 2. Waktu berlalu sudah melebihi limit waktu lock
+  
+  currTime = endTime - startTime;
+  if(loggedIn && (digitalRead(lockPin) == HIGH || currTime >= lockTime)){
+    loggedIn = false;
+    // Ini ceritanya tutup servo krn dari 180 sampe 90
+    for(int pos = 180; pos >= 90; pos--){
+      myservo.write(pos);
+      delay(10);
+    }
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Locker input: ");
+    lcd.setCursor(0, 1);
+    lcd.print("--> ");
   }
-
-  endtime = millis();
+  
+  endTime = millis();
 }

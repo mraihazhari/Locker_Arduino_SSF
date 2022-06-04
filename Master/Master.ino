@@ -3,10 +3,7 @@
 #include <LiquidCrystal_I2C.h>
 #include <avr/sleep.h>
 #define interruptPin 2
-#define fpPin 0 //pin input Finger Print
-
-LiquidCrystal_I2C lcd(0x27,21,4);
-int i, j;
+#define fpPin 0 // Pin input Finger Print
 
 // Setup Keypad
 const byte ROWS = 4, COLS = 4;
@@ -20,17 +17,12 @@ byte rowPins[ROWS] = {9,8,7,6};
 byte colPins[COLS] = {5,4,3,0}; 
 Keypad keypad = Keypad(makeKeymap(keyPad), rowPins, colPins, ROWS, COLS); 
 
-// Variabel untuk mengatur sleep
-boolean sleep;
-int startime;
-int endtime;
-int temp;
 const int idleTime = 2000;
-
-
+int startTime, endTime, currTime;
+char key, masterSend;
+  
 void setup(){
   Serial.begin(9600);
-  lcd.begin(21,4);
   pinMode(interruptPin,INPUT_PULLUP);
   SPI.begin();
   SPI.setClockDivider(SPI_CLOCK_DIV8);
@@ -38,38 +30,26 @@ void setup(){
 }
 
 void loop(){
-  char key = keypad.getKey();
-  lcd.clear();
-  lcd.setCursor(0, 0);
-    
+  startTime = millis();
+  endTime = startTime;
+  
   digitalWrite(SS, LOW);
 
-  // Mulai record waktu
-  startime = millis();
-  endtime = startime;
-  Serial.println("Outside Loop");
-  Serial.print("Start Time:");
-  Serial.println(startime);
-  Serial.print("End Time:");
-  Serial.println(endtime);
-
-  while(startime > 0){
-    temp = endtime - startime;
-    Serial.println(temp);
-    char key = keypad.getKey();
+  while(true){
+    currTime = endTime - startTime;
+    key = keypad.getKey();
     if(key){
-      SPI.transfer(key);
+      masterSend = key;
+      SPI.transfer(masterSend);
       break;
     }
     else{
-      if(temp >= idleTime){
-        sleep = true;
-        SPI.transfer(sleep);
+      if(currTime >= idleTime){
         gonna_sleep();
         break;
       }
     }
-    endtime = millis();
+    endTime = millis();
   }
   
   digitalWrite(SS, HIGH);
@@ -77,32 +57,18 @@ void loop(){
 }
 
 void gonna_sleep(){
-   // melakukan enable ke mode sleep
    sleep_enable();
    Serial.println("Sleep Mode");
    Serial.println("Zzz");
-   // menset interrupt
-   /*
-    * Jika interruptPin bernilai 0
-    * maka akan dilakukan interrupt
-    */
    attachInterrupt(0, wakeUp, LOW);
    set_sleep_mode(SLEEP_MODE_PWR_DOWN);
-   digitalWrite(LED_BUILTIN,LOW);
    delay(1000);
    sleep_cpu();
    Serial.println("Hi! I'm Awake");
-   digitalWrite(LED_BUILTIN,HIGH);
 }
 
 void wakeUp(){
    Serial.println("Wake Up Mode");
-   /*
-    * Membangunkan sleep
-    */
    sleep_disable();
    detachInterrupt(0);
-   /*
-    * Mengakhiri interrupt
-    */
 }
