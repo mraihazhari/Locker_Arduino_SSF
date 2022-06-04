@@ -1,5 +1,15 @@
 #include <LiquidCrystal_I2C.h>
 #include <SPI.h>
+#include <Servo.h>
+
+Servo myservo;
+
+
+int pos = 0;
+int lock = 7;
+int startime;
+int endtime;
+boolean lock_status;
 
 LiquidCrystal_I2C lcd(0x27,21,4);
 volatile boolean process;
@@ -23,6 +33,8 @@ void setup(){
   buff = "";
   masterMode = false;
   SPI.attachInterrupt();
+  myservo.attach(9);
+  pinMode(lock, INPUT);
 }
 
 ISR(SPI_STC_vect){
@@ -32,6 +44,7 @@ ISR(SPI_STC_vect){
 
 void loop(){
   // Authentication Mode
+  
   if(process && !masterMode && canInput){
     process = false;
     lcd.print(key);
@@ -57,6 +70,12 @@ void loop(){
         lcd.setCursor(0, 3);
         lcd.print("--> ");
         buff = "";
+        startime = millis();
+        lock_status = false;
+        for(pos = 90; pos <= 180 ; pos ++){
+          myservo.write(pos);
+          delay(10);
+        }
       }
       // Incorrect Password
       else{
@@ -88,4 +107,14 @@ void loop(){
     
     // Set of instructions ...
   }
+
+  if((digitalRead(lock) == HIGH || (endtime - startime) >= 360000) && lock_status == false){
+     for(pos = 180; pos >= 90 ; pos --){
+          myservo.write(pos);
+          lock_status = true;
+          delay(10);
+      }
+  }
+
+  endtime = millis();
 }
