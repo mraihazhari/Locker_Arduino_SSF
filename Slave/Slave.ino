@@ -36,7 +36,7 @@ void loop(){
   
   if(receivedInput){
     receivedInput = false;
-    lcd.print(slaveReceive);
+    lcd.print('*');
     buff += slaveReceive;
     if(buff.length() == password.length()){
       if(buff == password){
@@ -77,7 +77,7 @@ void loop(){
   }
 
   // Loker akan terkunci apabila
-  // 1. Tombol lock di tekan dan
+  // 1. Tombol lock di tekan atau
   // 2. Waktu berlalu sudah melebihi limit waktu lock
   
   currTime = endTime - startTime;
